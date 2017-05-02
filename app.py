@@ -5,6 +5,8 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from flask_restful import Resource, Api
 from flask import Flask, current_app, request, render_template, url_for, make_response
+from mimetypes import MimeTypes
+import urllib
 
 UPLOAD_FOLDER = '/home/ubuntu/deposits'
 app = Flask(__name__)
@@ -41,7 +43,9 @@ class Retrieve(Resource):
         docs = db.docs
         document = docs.find_one({"_id": ObjectId(docId)})
         response = make_response(document["content"])
-        response.headers['Content-Type'] = "text/plain"
+	mime = MimeTypes()
+	url = urllib.pathname2url(document["filename"])
+        response.headers['Content-Type'] = mime.guess_type(url)[0]
         return response
 
 
