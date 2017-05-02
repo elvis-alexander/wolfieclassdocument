@@ -19,7 +19,9 @@ api = Api(app)
 class Deposit(Resource):
     # save image on cassandra
     def post(self):
-        file = request.files['contents']
+	print request.values
+	print request.form
+        file = request.files['file']
         courseId = request.values.get('courseId')
         filename = file.filename
         client = MongoClient("127.0.0.1", 27017)
@@ -32,7 +34,10 @@ class Deposit(Resource):
         })
         courses.update_one({"courseId": courseId}, {"$addToSet": {"docIds": str(new_doc)}}, upsert=True)
         client.close()
-        return {"status": "OK"}
+	response = make_response("OK")
+	response.headers.add('Access-Control-Allow-Origin', '*')
+	return response
+        #return {"status": "OK"}
 
 
 # /retrieve { filename: }
@@ -52,11 +57,18 @@ class Retrieve(Resource):
 # retrieves all links associated with a courseId
 class Links(Resource):
     def get(self, courseId):
+	print 'courseId:', courseId
         client = MongoClient("127.0.0.1", 27017)
         db = client.wolfieclass
-        courses = db.courses
-        doc = courses.find_one({"courseId": courseId})
-        return {"status": "OK", "docIds": doc["docIds"]}
+        docs = db.docs
+	courses = db.courses
+        course = courses.find_one({"courseId": courseId})
+	output = {"status": "OK", "links": []}
+	for docId in course["docIds"]:
+		document = docs.find_one({"_id": ObjectId(docId)})
+		output.get("links").append({"link": docId, "filename": document["filename"]})
+	return output
+        #return {"status": "OK", "docIds": doc["docIds"]}
 
 api.add_resource(Deposit, '/deposit')
 api.add_resource(Retrieve, '/retrieve/<docId>')
